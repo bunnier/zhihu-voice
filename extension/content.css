@@ -5,17 +5,35 @@
 .zv-controls button[hidden] { display: none; }
 .zv-status { font-size: 12px; color: #64748b; }
 .zv-highlight { background: #fff1a8 !important; box-shadow: 0 0 0 3px #fff1a8; border-radius: 2px; }
-.zv-floating { position: fixed; z-index: 2147483000; width: 48px; height: 48px; font: 14px/1.4 system-ui, sans-serif; }
+.zv-floating { position: fixed; z-index: 2147483000; width: 48px; height: 48px; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 .zv-floating[hidden] { display: none; }
-.zv-float-play { width: 48px; height: 48px; border: 0; border-radius: 50%; color: white; background: #175199; box-shadow: 0 2px 10px #0004; cursor: grab; font: 20px system-ui, sans-serif; touch-action: none; }
+.zv-floating button, .zv-floating select { box-sizing: border-box; font: inherit; }
+.zv-float-play { display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; color: #fff; background: #056de8; box-shadow: 0 4px 14px rgba(5, 109, 232, .3); cursor: grab; font-size: 19px !important; touch-action: none; transition: background .15s, box-shadow .15s; }
+.zv-float-play:hover { background: #005ed0; box-shadow: 0 5px 18px rgba(5, 109, 232, .38); }
 .zv-float-play:active { cursor: grabbing; }
 .zv-float-play[aria-disabled="true"] { opacity: .8; }
-.zv-float-menu { position: absolute; top: 0; right: 0; width: 22px; height: 22px; padding: 0; border: 1px solid #b8c6d8; border-radius: 50%; background: white; color: #175199; cursor: pointer; }
-.zv-float-panel { display: none; position: absolute; left: 48px; bottom: 0; padding: 8px 10px; width: 160px; max-width: calc(100vw - 60px); box-sizing: border-box; background: white; color: #1f2937; border: 1px solid #d3dae3; border-radius: 8px; box-shadow: 0 2px 10px #0003; }
-.zv-float-top .zv-float-panel { bottom: auto; top: 0; }
-.zv-float-right .zv-float-panel { left: auto; right: 48px; }
-.zv-floating:hover .zv-float-panel, .zv-floating:focus-within .zv-float-panel, .zv-float-open .zv-float-panel { display: grid; gap: 6px; }
-.zv-float-panel select, .zv-float-settings { font: inherit; color: #175199; }
-.zv-float-settings { border: 0; background: transparent; text-align: left; padding: 2px 0; cursor: pointer; }
-.zv-float-hint { font-size: 12px; color: #475569; }
+.zv-float-menu { position: absolute; top: 0; right: 0; display: grid; place-items: center; width: 22px; height: 22px; padding: 0 0 3px; border: 2px solid #fff; border-radius: 50%; background: #eaf3ff; color: #056de8; font-size: 16px !important; line-height: 1 !important; cursor: pointer; }
+.zv-float-menu:hover, .zv-float-menu[aria-expanded="true"] { background: #d9eaff; }
+.zv-float-panel { position: absolute; visibility: hidden; pointer-events: none; width: min(224px, calc(100vw - 16px)); box-sizing: border-box; border: 1px solid #ebedf0; border-radius: 12px; background: #fff; color: #1a1a1a; box-shadow: 0 8px 28px rgba(18, 30, 50, .16), 0 2px 6px rgba(18, 30, 50, .06); }
+.zv-float-panel-inner { display: grid; box-sizing: border-box; max-height: calc(100vh - 18px); overflow-y: auto; padding: 16px; }
+.zv-floating:hover .zv-float-panel, .zv-floating:focus-within .zv-float-panel, .zv-float-open .zv-float-panel { visibility: visible; pointer-events: auto; }
+/* Keep the hover target continuous across the small gap beside the ball. */
+.zv-float-panel::before { content: ""; position: absolute; }
+.zv-floating[data-panel-side="right"] .zv-float-panel::before { right: 100%; top: 0; width: 8px; height: 100%; }
+.zv-floating[data-panel-side="left"] .zv-float-panel::before { left: 100%; top: 0; width: 8px; height: 100%; }
+.zv-floating[data-panel-side="above"] .zv-float-panel::before { top: 100%; left: 0; width: 100%; height: 8px; }
+.zv-floating[data-panel-side="below"] .zv-float-panel::before { bottom: 100%; left: 0; width: 100%; height: 8px; }
+.zv-float-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 15px; }
+.zv-float-title { font-weight: 600; }
+.zv-float-state { display: inline-flex; align-items: center; gap: 5px; color: #8590a6; font-size: 12px; white-space: nowrap; }
+.zv-float-state::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #056de8; }
+.zv-float-rate { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #444; font-size: 13px; }
+.zv-float-rate select { width: 91px; height: 34px; padding: 0 8px; border: 1px solid #d3dbe6; border-radius: 6px; background: #fff; color: #1a1a1a; cursor: pointer; }
+.zv-float-rate select:hover { border-color: #056de8; }
+.zv-float-rate select:disabled { color: #8590a6; cursor: default; }
+.zv-float-hint { color: #8590a6; font-size: 12px; line-height: 1.5; }
+.zv-float-hint:not(:empty) { margin-top: 8px; }
+.zv-float-settings { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 14px; padding: 12px 0 0; border: 0; border-top: 1px solid #f0f2f5; background: transparent; color: #175199; text-align: left; cursor: pointer; font-size: 13px !important; }
+.zv-float-settings span:last-child { color: #8590a6; font-size: 20px; line-height: 1; }
+.zv-float-settings:hover, .zv-float-settings:hover span:last-child { color: #056de8; }
 .zv-floating button:focus-visible, .zv-floating select:focus-visible { outline: 2px solid #056de8; outline-offset: 2px; }

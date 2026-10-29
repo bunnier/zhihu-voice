@@ -298,3 +298,27 @@ test('floating drag does not toggle, stays in viewport, and menu and rate follow
   $('#a .zv-stop').click(); assert.equal(ball.hidden, true); assert.equal(menu.getAttribute('aria-expanded'), 'false');
   dom.window.close();
 });
+
+test('floating panel stays inside the viewport on either edge and on narrow screens', async () => {
+  const { dom, window } = setup(answer('a', '<p>正文</p>'));
+  window.document.querySelector('.zv-play').click(); await sleep(30);
+  const ball = window.document.querySelector('.zv-floating'), panel = ball.querySelector('.zv-float-panel');
+  Object.defineProperty(panel, 'offsetWidth', { get: () => Math.min(224, window.innerWidth - 16) });
+  Object.defineProperty(panel, 'offsetHeight', { get: () => 150 });
+  function position(width, height, x, y) {
+    Object.defineProperty(window, 'innerWidth', { value: width, configurable: true });
+    Object.defineProperty(window, 'innerHeight', { value: height, configurable: true });
+    ball.style.left = x + 'px'; ball.style.top = y + 'px';
+    window.dispatchEvent(new window.Event('resize'));
+    const left = parseFloat(ball.style.left) + parseFloat(panel.style.left);
+    const top = parseFloat(ball.style.top) + parseFloat(panel.style.top);
+    assert.ok(left >= 8 && left + panel.offsetWidth <= width - 8);
+    assert.ok(top >= 8 && top + panel.offsetHeight <= height - 8);
+    return ball.dataset.panelSide;
+  }
+  assert.equal(position(800, 600, 0, 0), 'right');
+  assert.equal(position(800, 600, 752, 552), 'left');
+  assert.equal(position(320, 568, 136, 500), 'above');
+  assert.equal(position(320, 568, 136, 0), 'below');
+  dom.window.close();
+});
