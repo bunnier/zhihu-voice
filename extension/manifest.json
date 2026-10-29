@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "知乎回答朗读",
+  "version": "0.1.0",
+  "description": "在知乎回答旁朗读正文，支持逐段高亮。",
+  "permissions": [
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.zhihu.com/*"
+      ],
+      "js": [
+        "extract.js",
+        "speech.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html",
+  "action": {
+    "default_title": "知乎回答朗读：在扩展管理中打开设置"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
