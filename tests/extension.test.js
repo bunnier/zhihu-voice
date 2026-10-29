@@ -262,3 +262,39 @@ test('ignores nested content belonging to another card and does not add controls
   assert.equal(window.document.querySelector('.PinItem .zv-controls'), null);
   dom.window.close();
 });
+
+test('floating control follows active playback, switches answers, and hides on end or failure', async () => {
+  const { dom, window, synth } = setup(answer('a', '<p>甲</p>') + answer('b', '<p>乙</p>'));
+  const $ = s => window.document.querySelector(s);
+  $('#a .zv-play').click(); await sleep(30);
+  const ball = $('.zv-floating'), button = $('.zv-float-play');
+  assert.equal(ball.hidden, false); assert.match(button.getAttribute('aria-label'), /暂停/);
+  button.click(); assert.equal(synth.paused, true); assert.match(button.getAttribute('aria-label'), /继续/);
+  assert.match($('#a .zv-play').textContent, /继续/);
+  button.click(); assert.equal(synth.paused, false);
+  $('#b .zv-play').click(); await sleep(30);
+  button.click(); assert.equal(synth.paused, true); assert.match($('#b .zv-play').textContent, /继续/);
+  button.click(); const u = synth.utterances.at(-1); u.onstart(); u.onend(); assert.equal(ball.hidden, true);
+  $('#a .zv-play').click(); await sleep(30); synth.utterances.at(-1).onerror({ error: '失败' });
+  assert.equal(ball.hidden, true); assert.match($('#a .zv-status').textContent, /失败/);
+  dom.window.close();
+});
+
+test('floating drag does not toggle, stays in viewport, and menu and rate follow playback', async () => {
+  const { dom, window, synth } = setup(answer('a', '<p>' + '甲'.repeat(250) + '</p>'));
+  const $ = s => window.document.querySelector(s);
+  $('#a .zv-play').click(); await sleep(30);
+  const ball = $('.zv-floating'), button = $('.zv-float-play'), menu = $('.zv-float-menu');
+  const pointer = (type, x, y) => { const e = new window.MouseEvent(type, { bubbles: true, button: 0, clientX: x, clientY: y }); Object.defineProperty(e, 'pointerId', { value: 1 }); button.dispatchEvent(e); };
+  pointer('pointerdown', 20, 20); pointer('pointermove', 5000, 5000); pointer('pointerup', 5000, 5000); button.click();
+  assert.equal(synth.paused, false); assert.ok(parseFloat(ball.style.left) <= window.innerWidth - 48); assert.ok(parseFloat(ball.style.top) <= window.innerHeight - 48);
+  Object.defineProperty(window, 'innerWidth', { value: 300, configurable: true }); Object.defineProperty(window, 'innerHeight', { value: 200, configurable: true }); window.dispatchEvent(new window.Event('resize'));
+  assert.ok(parseFloat(ball.style.left) <= 252); assert.ok(parseFloat(ball.style.top) <= 152);
+  const oldLeft = parseFloat(ball.style.left); button.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  assert.equal(parseFloat(ball.style.left), oldLeft - 20);
+  menu.click(); assert.equal(menu.getAttribute('aria-expanded'), 'true');
+  const select = $('.zv-float-panel select'); select.value = '1.25'; select.dispatchEvent(new window.Event('change', { bubbles: true }));
+  const first = synth.utterances[0]; assert.equal(first.rate, 1); first.onstart(); first.onend(); assert.equal(synth.utterances[1].rate, 1.25);
+  $('#a .zv-stop').click(); assert.equal(ball.hidden, true); assert.equal(menu.getAttribute('aria-expanded'), 'false');
+  dom.window.close();
+});

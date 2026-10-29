@@ -9,7 +9,12 @@ const allowed = sender => {
 const previewAllowed = sender => sender?.id === chrome.runtime.id && sender.url === chrome.runtime.getURL('options.html');
 const previewText = '你好，这是一段语音试听。请选择适合你的声音和播放速度。';
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (!allowed(sender) || message?.type !== 'settings') return;
+  if (!allowed(sender)) return;
+  if (message?.type === 'open-options') {
+    chrome.runtime.openOptionsPage().then(() => respond({ ok: true })).catch(() => respond({ error: '无法打开设置' }));
+    return true;
+  }
+  if (message?.type !== 'settings') return;
   (async () => {
     await restricted;
     const { provider, rate, voiceURI, tencentVoice } = await chrome.storage.local.get(defaults);

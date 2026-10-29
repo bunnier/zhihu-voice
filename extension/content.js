@@ -6,6 +6,8 @@
   let serial = 0;
   let locationHref = location.href;
   let scheduled = false;
+  let pageRate = null;
+  let floating = null;
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
   function answerKey(answer) {
@@ -29,6 +31,7 @@
     setText(controls.querySelector('.zv-status'), message);
   }
   function renderActive() {
+    renderFloating();
     if (!active?.answer.isConnected) return;
     for (const controls of controlsFor(active.answer)) renderControls(controls, active.state, active.message);
   }
@@ -43,6 +46,13 @@
     clearHighlight();
     if (active.answer.isConnected) for (const controls of controlsFor(active.answer)) renderControls(controls, null, message);
     active = null;
+    renderFloating();
+  }
+  function togglePlayback() {
+    if (!active || active.state === 'loading') return;
+    if (active.state === 'playing') { provider.pause(); active.state = 'paused'; active.message = '已暂停'; }
+    else { provider.resume(); active.state = 'playing'; active.message = active.incomplete ? '可能未能完整展开，正在朗读可见正文' : '朗读中'; }
+    renderActive();
   }
   function reconcileAnswer() {
     if (!active) return false;
@@ -64,10 +74,7 @@
     controls.querySelector('.zv-stop').addEventListener('click', () => { if (sameAnswer(answer)) reset('已停止'); });
     controls.querySelector('.zv-play').addEventListener('click', async () => {
       if (sameAnswer(answer)) {
-        if (active.state === 'loading') return;
-        if (active.state === 'playing') { provider.pause(); active.state = 'paused'; active.message = '已暂停'; }
-        else { provider.resume(); active.state = 'playing'; active.message = active.incomplete ? '可能未能完整展开，正在朗读可见正文' : '朗读中'; }
-        renderActive();
+        togglePlayback();
         return;
       }
       reset();
@@ -98,6 +105,9 @@
       let settings = {};
       try { settings = await chrome.runtime.sendMessage({ type: 'settings' }); if (!settings || settings.error) throw new Error(); } catch (_) { if (token === serial) reset('无法读取扩展设置，请重新加载扩展'); return; }
       if (token !== serial || !reconcileAnswer()) return;
+      settings.rate = pageRate ?? settings.rate;
+      active.rate = Number(settings.rate) || 1;
+      active.provider = settings.provider;
       provider = settings.provider === 'tencent' ? new globalThis.ZhihuVoiceSpeech.TencentSpeechProvider() : new globalThis.ZhihuVoiceSpeech.BrowserSpeechProvider();
       active.state = 'playing';
       active.message = result.incomplete ? '可能未能完整展开，正在朗读可见正文' : '正在启动语音…';
@@ -118,6 +128,90 @@
         });
       } catch (_) { if (token === serial) reset('语音播放失败，请检查浏览器语音设置后重试'); }
     });
+  }
+  function renderFloating() {
+    if (!active) { if (floating) { floating.hidden = true; floating.classList.remove('zv-float-open'); floating.querySelector('.zv-float-menu').setAttribute('aria-expanded', 'false'); floating.querySelector('.zv-float-menu').setAttribute('aria-label', '展开朗读工具'); floating.querySelector('.zv-float-hint').textContent = ''; } return; }
+    if (!floating) createFloating();
+    floating.hidden = false;
+    const button = floating.querySelector('.zv-float-play');
+    const loading = active.state === 'loading';
+    button.setAttribute('aria-disabled', String(loading));
+    setText(button, loading ? '…' : active.state === 'playing' ? 'Ⅱ' : '▶');
+    const label = loading ? '正在准备朗读' : active.state === 'playing' ? '正在朗读，点击暂停' : '已暂停，点击继续';
+    button.setAttribute('aria-label', label);
+    button.title = label + '；拖动或使用方向键可移动';
+    setText(floating.querySelector('.zv-float-state'), loading ? '准备中' : active.state === 'playing' ? '朗读中' : '已暂停');
+    const rate = floating.querySelector('select');
+    rate.disabled = loading;
+    if (!loading) {
+      const value = String(active.rate);
+      if (![...rate.options].some(option => option.value === value)) rate.add(new Option(value + '×', value));
+      rate.value = value;
+    }
+    clampFloating();
+  }
+  function clampFloating() {
+    if (!floating || floating.hidden) return;
+    const button = floating.querySelector('.zv-float-play');
+    const width = button.offsetWidth || 48, height = button.offsetHeight || 48;
+    const maxX = Math.max(0, innerWidth - width), maxY = Math.max(0, innerHeight - height);
+    const x = Math.min(maxX, Math.max(0, parseFloat(floating.style.left) || 0));
+    const y = Math.min(maxY, Math.max(0, parseFloat(floating.style.top) || 0));
+    floating.style.left = x + 'px'; floating.style.top = y + 'px';
+    floating.classList.toggle('zv-float-right', x > innerWidth / 2);
+    floating.classList.toggle('zv-float-top', y < 130);
+  }
+  function createFloating() {
+    floating = document.createElement('div');
+    floating.className = 'zv-floating';
+    floating.style.left = '16px'; floating.style.top = Math.max(0, innerHeight - 140) + 'px';
+    floating.innerHTML = `<button type="button" class="zv-float-play"></button><div class="zv-float-panel"><span class="zv-float-state"></span><label>倍速 <select aria-label="当前朗读倍速"><option value="0.75">0.75×</option><option value="0.8">0.8×</option><option value="1">1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select></label><button type="button" class="zv-float-settings">设置</button><span class="zv-float-hint" role="status"></span></div><button type="button" class="zv-float-menu" aria-label="展开朗读工具" aria-expanded="false">⋯</button>`;
+    document.documentElement.append(floating);
+    const button = floating.querySelector('.zv-float-play');
+    const menu = floating.querySelector('.zv-float-menu');
+    let drag = null, suppressClick = false;
+    button.addEventListener('pointerdown', event => {
+      if (event.button !== 0) return;
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, left: parseFloat(floating.style.left), top: parseFloat(floating.style.top), moved: false };
+      button.setPointerCapture?.(event.pointerId);
+    });
+    button.addEventListener('pointermove', event => {
+      if (!drag || event.pointerId !== drag.id) return;
+      const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+      if (Math.hypot(dx, dy) >= 5) drag.moved = true;
+      if (drag.moved) { floating.style.left = (drag.left + dx) + 'px'; floating.style.top = (drag.top + dy) + 'px'; clampFloating(); }
+    });
+    button.addEventListener('pointerup', event => {
+      if (!drag || event.pointerId !== drag.id) return;
+      suppressClick = drag.moved; drag = null;
+      if (suppressClick) setTimeout(() => { suppressClick = false; }, 0);
+    });
+    button.addEventListener('pointercancel', () => { drag = null; suppressClick = false; });
+    button.addEventListener('click', event => { event.stopPropagation(); if (!suppressClick) togglePlayback(); suppressClick = false; });
+    button.addEventListener('keydown', event => {
+      const direction = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
+      if (!direction) return;
+      event.preventDefault();
+      floating.style.left = (parseFloat(floating.style.left) + direction[0] * 20) + 'px';
+      floating.style.top = (parseFloat(floating.style.top) + direction[1] * 20) + 'px';
+      clampFloating();
+    });
+    menu.addEventListener('click', () => {
+      const open = floating.classList.toggle('zv-float-open');
+      menu.setAttribute('aria-expanded', String(open)); menu.setAttribute('aria-label', open ? '收起朗读工具' : '展开朗读工具');
+    });
+    floating.querySelector('select').addEventListener('change', event => {
+      if (!active || active.state === 'loading') return;
+      pageRate = active.rate = Number(event.target.value);
+      provider.setRate(pageRate);
+      floating.querySelector('.zv-float-hint').textContent = active.provider === 'tencent' ? '倍速已调整' : '浏览器语音将在下一片段使用新倍速';
+    });
+    floating.querySelector('.zv-float-settings').addEventListener('click', async () => {
+      try { const result = await chrome.runtime.sendMessage({ type: 'open-options' }); if (result?.error) throw new Error(); }
+      catch (_) { floating.querySelector('.zv-float-hint').textContent = '无法打开设置，请在扩展管理中打开'; }
+    });
+    floating.addEventListener('click', event => event.stopPropagation());
+    addEventListener('resize', clampFloating);
   }
   function updateHighlight() {
     if (!active || active.paragraphIndex === null || !active.answer.isConnected) return;

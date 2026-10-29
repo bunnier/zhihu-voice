@@ -41,6 +41,7 @@
     start(paragraphs, settings, callbacks) {
       if (this.running) this.stop();
       this.running = true;
+      this.settings = settings;
       const generation = this.generation;
       const chunks = browserChunks(paragraphs);
       let cursor = 0;
@@ -70,6 +71,7 @@
       };
       next();
     }
+    setRate(rate) { if (this.settings) this.settings.rate = rate; }
     pause() { this.synth.pause(); }
     resume() { this.synth.resume(); }
     stop() { this.generation++; if (this.running) { this.running = false; this.synth.cancel(); } }
@@ -78,6 +80,7 @@
     constructor({ preview = false } = {}) { this.preview = preview; this.generation = 0; this.audio = null; this.pending = null; this.url = null; this.paused = false; this.playAttempt = 0; }
     start(paragraphs, settings, callbacks) {
       this.stop();
+      this.settings = settings;
       const generation = this.generation;
       const chunks = paragraphs.flatMap((p, index) => splitText(p.text, 120).filter(text => text.trim()).map(text => ({ text, index })));
       let cursor = 0;
@@ -144,6 +147,7 @@
         if (generation === this.generation && attempt === this.playAttempt && !this.paused) this.error?.('音频播放被浏览器阻止，请重试或检查浏览器播放权限');
       });
     }
+    setRate(rate) { if (this.settings) this.settings.rate = rate; if (this.audio) this.audio.playbackRate = rate; }
     pause() { this.paused = true; this.playAttempt++; this.audio?.pause(); }
     resume() {
       this.paused = false;

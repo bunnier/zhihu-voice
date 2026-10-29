@@ -155,3 +155,27 @@ test('disconnecting a pending Tencent request aborts fetch and suppresses its re
   assert.ok(signal); port.disconnect(); await tick();
   assert.equal(signal.aborted, true); assert.equal(posted, false);
 });
+
+test('Tencent rate changes affect current and subsequent audio, including while paused', () => {
+  const { ctx, ports, audios } = speechHarness(); const p = new ctx.ZhihuVoiceSpeech.TencentSpeechProvider();
+  p.start([{ text: '甲'.repeat(180) }], { rate: 1, tencentVoice: 101001 }, { onParagraph() {}, onEnd() {}, onError(e) { assert.fail(e); } });
+  ports[0].onMessage.fire({ audio: 'YQ==' });
+  p.pause(); p.setRate(1.25); assert.equal(audios[0].playbackRate, 1.25);
+  p.resume(); audios[0].onended(); ports[1].onMessage.fire({ audio: 'YQ==' });
+  assert.equal(audios[1].playbackRate, 1.25); p.setRate(1.5); assert.equal(audios[1].playbackRate, 1.5);
+  p.stop();
+});
+
+test('options shortcut accepts only extension content on Zhihu', async () => {
+  const onMessage = event(); let opened = 0, storageReads = 0;
+  const chrome = { runtime: { id: 'extension-id', onMessage, onConnect: event(), openOptionsPage: async () => { opened++; } }, storage: { local: {
+    setAccessLevel: async () => {}, get: async () => { storageReads++; return {}; }
+  } } };
+  const ctx = { chrome, URL, importScripts() {} }; vm.createContext(ctx); vm.runInContext(source('background.js'), ctx);
+  let response;
+  onMessage.fire({ type: 'open-options' }, { id: 'extension-id', url: 'https://www.zhihu.com/question/1' }, r => { response = r; });
+  await tick(); assert.equal(opened, 1); assert.equal(response.ok, true); assert.equal(storageReads, 0);
+  onMessage.fire({ type: 'open-options' }, { id: 'extension-id', url: 'https://example.com/' }, () => assert.fail('unexpected response'));
+  onMessage.fire({ type: 'open-options' }, { id: 'other', url: 'https://www.zhihu.com/' }, () => assert.fail('unexpected response'));
+  await tick(); assert.equal(opened, 1); assert.equal(storageReads, 0);
+});

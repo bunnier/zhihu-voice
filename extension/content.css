@@ -5,3 +5,17 @@
 .zv-controls button[hidden] { display: none; }
 .zv-status { font-size: 12px; color: #64748b; }
 .zv-highlight { background: #fff1a8 !important; box-shadow: 0 0 0 3px #fff1a8; border-radius: 2px; }
+.zv-floating { position: fixed; z-index: 2147483000; width: 48px; height: 48px; font: 14px/1.4 system-ui, sans-serif; }
+.zv-floating[hidden] { display: none; }
+.zv-float-play { width: 48px; height: 48px; border: 0; border-radius: 50%; color: white; background: #175199; box-shadow: 0 2px 10px #0004; cursor: grab; font: 20px system-ui, sans-serif; touch-action: none; }
+.zv-float-play:active { cursor: grabbing; }
+.zv-float-play[aria-disabled="true"] { opacity: .8; }
+.zv-float-menu { position: absolute; top: 0; right: 0; width: 22px; height: 22px; padding: 0; border: 1px solid #b8c6d8; border-radius: 50%; background: white; color: #175199; cursor: pointer; }
+.zv-float-panel { display: none; position: absolute; left: 48px; bottom: 0; padding: 8px 10px; width: 160px; max-width: calc(100vw - 60px); box-sizing: border-box; background: white; color: #1f2937; border: 1px solid #d3dae3; border-radius: 8px; box-shadow: 0 2px 10px #0003; }
+.zv-float-top .zv-float-panel { bottom: auto; top: 0; }
+.zv-float-right .zv-float-panel { left: auto; right: 48px; }
+.zv-floating:hover .zv-float-panel, .zv-floating:focus-within .zv-float-panel, .zv-float-open .zv-float-panel { display: grid; gap: 6px; }
+.zv-float-panel select, .zv-float-settings { font: inherit; color: #175199; }
+.zv-float-settings { border: 0; background: transparent; text-align: left; padding: 2px 0; cursor: pointer; }
+.zv-float-hint { font-size: 12px; color: #475569; }
+.zv-floating button:focus-visible, .zv-floating select:focus-visible { outline: 2px solid #056de8; outline-offset: 2px; }
