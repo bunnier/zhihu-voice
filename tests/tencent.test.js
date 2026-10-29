@@ -42,7 +42,7 @@ test('Tencent provider pauses during synthesis, resumes, highlights chunks, and 
   const highlights = [], errors = []; let ended = false;
   p.start([{ text: '甲'.repeat(180) }, { text: '乙' }], { rate: 1.25, tencentVoice: 101001 }, { onParagraph: i => highlights.push(i), onEnd: () => { ended = true; }, onError: e => errors.push(e) });
   assert.equal(ports[0].sent.text.length, 120); p.pause();
-  ports[0].onMessage.fire({ audio: 'YQ==' }); assert.equal(audios[0].plays, 0);
+  ports[0].onMessage.fire({ audio: 'YQ==' }); assert.equal(audios.length, 0);
   p.resume(); assert.equal(audios[0].plays, 1); assert.equal(audios[0].playbackRate, 1.25); assert.deepEqual(highlights, [0]);
   audios[0].onended(); assert.equal(ports[1].sent.text.length, 60);
   ports[1].onMessage.fire({ audio: 'YQ==' }); audios[1].onended();
@@ -105,4 +105,53 @@ test('a play promise interrupted by pause does not report an error', async () =>
   audios[0].play = () => new Promise((_, reject) => { rejectPlay = reject; });
   p.pause(); p.resume(); p.pause(); rejectPlay(new Error('interrupted')); await tick();
   assert.equal(errors, 0); p.stop();
+});
+
+test('Tencent prefetch overlaps playback, keeps one future chunk, and defers its errors', () => {
+  const { ctx, ports, audios } = speechHarness(); const p = new ctx.ZhihuVoiceSpeech.TencentSpeechProvider();
+  const highlights = [], errors = [];
+  p.start([{ text: '甲' }, { text: '乙' }, { text: '丙' }], {}, { onParagraph: i => highlights.push(i), onEnd() {}, onError: e => errors.push(e) });
+  assert.equal(ports.length, 1);
+  ports[0].onMessage.fire({ audio: 'YQ==' });
+  assert.equal(audios[0].plays, 1); assert.equal(ports.length, 2); assert.equal(ports[1].sent.text, '乙');
+  ports[1].onMessage.fire({ audio: 'YQ==' });
+  assert.equal(ports.length, 2); assert.equal(audios.length, 1);
+  audios[0].onended();
+  assert.equal(audios[1].plays, 1); assert.deepEqual(highlights, [0, 1]);
+  assert.equal(ports.length, 3); assert.equal(ports[2].sent.text, '丙');
+  ports[2].onMessage.fire({ error: '合成失败' }); assert.deepEqual(errors, []);
+  audios[1].onended(); assert.deepEqual(errors, ['合成失败']);
+});
+
+test('Tencent pause and stop bound prefetch and discard pending results', () => {
+  const { ctx, ports, audios, revoked } = speechHarness(); const p = new ctx.ZhihuVoiceSpeech.TencentSpeechProvider();
+  let calls = 0;
+  p.start([{ text: '甲' }, { text: '乙' }, { text: '丙' }], {}, { onParagraph() { calls++; }, onEnd() { calls++; }, onError() { calls++; } });
+  p.pause(); ports[0].onMessage.fire({ audio: 'YQ==' });
+  assert.equal(audios.length, 0); assert.equal(ports.length, 1);
+  p.resume(); assert.equal(ports.length, 2); assert.equal(calls, 1);
+  p.pause(); ports[1].onMessage.fire({ audio: 'YQ==' });
+  assert.equal(ports.length, 2); assert.equal(audios.length, 1);
+  p.stop(); assert.equal(revoked.length, 1);
+  p.start([{ text: '新回答' }, { text: '新下一段' }], {}, { onParagraph() { calls++; }, onEnd() { calls++; }, onError() { calls++; } });
+  ports[2].onMessage.fire({ audio: 'YQ==' }); assert.equal(ports.length, 4);
+  const stale = ports[3]; p.stop(); assert.equal(stale.disconnected, true);
+  stale.onMessage.fire({ audio: 'YQ==' }); assert.equal(audios.length, 2); assert.equal(calls, 2);
+});
+
+test('disconnecting a pending Tencent request aborts fetch and suppresses its result', async () => {
+  const onMessage = event(), onConnect = event(); let signal, posted = false;
+  const chrome = { runtime: { id: 'extension-id', onMessage, onConnect }, storage: { local: {
+    setAccessLevel: async () => {}, get: async defaults => ({ ...defaults, secretId: 'test-id', secretKey: 'test-key' })
+  } } };
+  const ctx = { chrome, crypto: webcrypto, TextEncoder, URL, AbortController, setTimeout, clearTimeout,
+    importScripts() { vm.runInContext(source('tencent.js'), ctx); },
+    fetch(url, options) { signal = options.signal; return new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })))); }
+  };
+  vm.createContext(ctx); vm.runInContext(source('background.js'), ctx);
+  const port = { name: 'tencent-tts', sender: { id: 'extension-id', url: 'https://www.zhihu.com/question/1' }, onMessage: event(), onDisconnect: event(), postMessage() { posted = true; }, disconnect() { this.onDisconnect.fire(); } };
+  onConnect.fire(port); port.onMessage.fire({ text: '下一段', voiceType: 101001 });
+  for (let i = 0; i < 50 && !signal; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.ok(signal); port.disconnect(); await tick();
+  assert.equal(signal.aborted, true); assert.equal(posted, false);
 });

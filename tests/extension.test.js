@@ -32,12 +32,12 @@ test('controls insert after votes, play, pause, resume, highlight and switch ans
   const a = window.document.querySelector('#a'), b = window.document.querySelector('#b');
   assert.equal(a.querySelector('.ContentItem-actions').children[1].className, 'zv-controls');
   a.querySelector('.zv-play').click(); await sleep(200);
-  assert.equal(synth.utterances.at(-1).text, '甲第一段');
+  assert.equal(synth.utterances.at(-1).text, '甲第一段。 甲第二段');
   synth.utterances.at(-1).onstart(); assert.ok(a.querySelector('p').classList.contains('zv-highlight'));
   a.querySelector('.zv-play').click(); assert.equal(synth.paused, true);
   a.querySelector('.zv-play').click(); assert.equal(synth.paused, false);
-  synth.utterances.at(-1).onend(); assert.equal(synth.utterances.at(-1).text, '甲第二段');
-  synth.utterances.at(-1).onstart(); assert.ok(a.querySelectorAll('p')[1].classList.contains('zv-highlight'));
+  synth.utterances.at(-1).onboundary({ charIndex: '甲第一段。 '.length });
+  assert.ok(a.querySelectorAll('p')[1].classList.contains('zv-highlight'));
   const stale = synth.utterances.at(-1);
   b.querySelector('.zv-play').click(); await sleep(200);
   assert.equal(synth.utterances.at(-1).text, '乙正文');
@@ -76,7 +76,8 @@ test('chunks long text without dropping characters or splitting surrogate pairs'
   const text = '中文'.repeat(89) + '😀' + '句子。'.repeat(100);
   const chunks = window.ZhihuVoiceSpeech.splitText(text);
   assert.equal(chunks.join(''), text);
-  assert.ok(chunks.every(c => !/[\uD800-\uDBFF]$/.test(c)));
+  assert.ok(chunks.every(c => c.length <= 180 && !/[\uD800-\uDBFF]$/.test(c)));
+  assert.ok(window.ZhihuVoiceSpeech.splitText('甲'.repeat(180) + '。乙').every(c => c.length <= 180));
   dom.window.close();
 });
 
@@ -156,9 +157,7 @@ test('preserves playback and remaps highlight when the answer is redrawn', async
   assert.equal(synth.cancels, cancelCount);
   assert.equal(a.querySelector('.zv-play').textContent, '⏸ 暂停');
   assert.ok(a.querySelector('p').classList.contains('zv-highlight'));
-  utterance.onend();
-  assert.equal(synth.utterances.at(-1).text, '第二段');
-  synth.utterances.at(-1).onstart();
+  utterance.onboundary({ charIndex: '第一段。 '.length });
   assert.ok(a.querySelectorAll('p')[1].classList.contains('zv-highlight'));
   dom.window.close();
 });
@@ -187,5 +186,22 @@ test('does not cancel browser speech when starting an idle provider', () => {
   assert.equal(synth.cancels, 0);
   provider.stop();
   assert.equal(synth.cancels, 1);
+  dom.window.close();
+});
+
+test('browser joins short paragraphs, bounds long utterances and highlights boundary events', () => {
+  const { dom, window, synth } = setup('');
+  const provider = new window.ZhihuVoiceSpeech.BrowserSpeechProvider(synth);
+  const highlights = []; let ended = 0;
+  provider.start([{ text: '第一段。' }, { text: '第二段' }, { text: '长'.repeat(370) }], {}, {
+    onParagraph(i) { highlights.push(i); }, onEnd() { ended++; }, onError(e) { assert.fail(e); }
+  });
+  let i = 0;
+  while (i < synth.utterances.length) {
+    const u = synth.utterances[i++]; assert.ok(u.text.length <= 180); u.onstart();
+    if (i === 1) { assert.equal(u.text, '第一段。 第二段'); u.onboundary({ charIndex: '第一段。 '.length }); }
+    u.onend();
+  }
+  assert.deepEqual(highlights.slice(0, 2), [0, 1]); assert.ok(highlights.includes(2)); assert.equal(ended, 1);
   dom.window.close();
 });

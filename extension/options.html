@@ -3,7 +3,7 @@
 <label for="provider">语音服务</label><select id="provider"><option value="browser">浏览器语音</option><option value="tencent">腾讯云语音合成</option></select>
 <section id="browser-settings"><label for="voice">浏览器声音</label><select id="voice"><option value="">自动选择中文声音</option></select><p>可用声音和音质因浏览器和设备而异。</p></section>
 <section id="tencent-settings" hidden>
-<p>使用腾讯云时，当前回答的文本会分段发送至腾讯云合成，可能产生费用。</p>
+<p>使用腾讯云时，当前回答的文本会分段发送至腾讯云合成，可能产生费用。播放时会提前请求最多下一段；暂停或停止前该段可能已发送并计费。</p>
 <label for="tencent-voice">腾讯云音色</label><select id="tencent-voice"><option value="101001">智瑜 · 情感女声（精品）</option><option value="101004">智云 · 通用男声（精品）</option><option value="101011">智燕 · 新闻女声（精品）</option><option value="101021">智瑞 · 新闻男声（精品）</option><option value="601013">爱小伊 · 阅读女声（大模型）</option></select>
 <label for="secret-id">SecretId</label><input id="secret-id" type="password" autocomplete="off" spellcheck="false" placeholder="输入新的 SecretId">
 <label for="secret-key">SecretKey</label><input id="secret-key" type="password" autocomplete="off" spellcheck="false" placeholder="输入新的 SecretKey">
