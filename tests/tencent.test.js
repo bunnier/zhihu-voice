@@ -91,8 +91,8 @@ test('settings offer common speeds and preserve stored credentials when left bla
   assert.ok([...rate.options].some(o => o.value === '1.25')); assert.ok([...rate.options].some(o => o.value === '1.5'));
   rate.value = '1.25'; w.document.querySelector('#save').click(); await tick();
   assert.equal(saved.rate, 1.25); assert.equal(saved.secretId, 'stored-id'); assert.equal(saved.secretKey, 'stored-key');
-  w.document.querySelector('#secret-id').value = 'replacement'; w.document.querySelector('#save').click(); await tick();
-  assert.equal(saved.secretId, 'stored-id'); assert.match(w.document.querySelector('#status').textContent, /同时填写/);
+  w.document.querySelector('#secret-id').value = 'replacement'; w.document.querySelector('#save-credentials').click(); await tick();
+  assert.equal(saved.secretId, 'stored-id'); assert.match(w.document.querySelector('#credential-feedback').textContent, /同时填写/);
   w.document.querySelector('#clear-credentials').click(); await tick(); assert.equal(saved.secretKey, undefined); assert.equal(saved.secretId, undefined);
   dom.window.close();
 });

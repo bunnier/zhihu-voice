@@ -7,8 +7,8 @@
 <label for="tencent-voice">腾讯云音色</label><select id="tencent-voice"><option value="101001">智瑜 · 情感女声（精品）</option><option value="101004">智云 · 通用男声（精品）</option><option value="101011">智燕 · 新闻女声（精品）</option><option value="101021">智瑞 · 新闻男声（精品）</option><option value="601013">爱小伊 · 阅读女声（大模型）</option></select>
 <label for="secret-id">SecretId</label><input id="secret-id" type="password" autocomplete="off" spellcheck="false" placeholder="输入新的 SecretId">
 <label for="secret-key">SecretKey</label><input id="secret-key" type="password" autocomplete="off" spellcheck="false" placeholder="输入新的 SecretKey">
-<p id="credential-status"></p><p>留空表示保留已保存的密钥；如需更换，请同时填写两项。密钥保存在此浏览器的扩展本地存储中，并非加密保险箱；能访问浏览器配置或扩展数据的人可能读取。建议使用权限受限的腾讯云子账号密钥。</p>
-<button id="clear-credentials" class="secondary" type="button">删除已保存的密钥</button>
+<p id="credential-status"></p><p>保存页面设置不会更改密钥；如需保存或更换密钥，请同时填写两项。密钥保存在此浏览器的扩展本地存储中，并非加密保险箱；能访问浏览器配置或扩展数据的人可能读取。建议使用权限受限的腾讯云子账号密钥。</p>
+<div class="credential-actions"><button id="save-credentials" type="button" disabled>保存密钥</button><button id="clear-credentials" class="secondary" type="button" disabled>删除已保存的密钥</button></div><p id="credential-feedback" role="status" aria-live="polite"></p>
 <p>免费资源包需在控制台领取，有效期和额度随音色类型而异；超额后是否收费取决于资源包及后付费状态。请以<a href="https://cloud.tencent.com/document/product/1073/34112" target="_blank" rel="noreferrer">腾讯云计费说明</a>和控制台为准。<a href="https://cloud.tencent.com/document/product/1073/92668" target="_blank" rel="noreferrer">音色列表</a></p>
 </section>
 <label for="rate">播放速度</label><select id="rate"><option value="0.75">0.75×</option><option value="0.8">0.8×</option><option value="1">1× 正常</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select>
@@ -16,5 +16,5 @@
 <p>试听示例：你好，这是一段语音试听。请选择适合你的声音和播放速度。</p>
 <p id="preview-notice" hidden>点击试听会使用已保存的腾讯云密钥，将上述示例发送至腾讯云，可能产生费用。新输入的密钥需保存后才能用于试听。</p>
 <button id="preview" type="button" disabled>试听当前选择</button><button id="stop-preview" class="secondary" type="button" hidden>停止试听</button><p id="preview-status" role="status" aria-live="polite"></p>
-<button id="save" type="button">保存设置</button><p id="status" role="status"></p>
+<button id="save" type="button" disabled>保存页面设置</button><p id="status" role="status"></p>
 </main><script src="speech.js"></script><script src="options.js"></script></body></html>
