@@ -205,3 +205,60 @@ test('browser joins short paragraphs, bounds long utterances and highlights boun
   assert.deepEqual(highlights.slice(0, 2), [0, 1]); assert.ok(highlights.includes(2)); assert.equal(ended, 1);
   dom.window.close();
 });
+
+
+test('article cards expand and read their own full body while adjacent answers stay independent', async () => {
+  const article = answer('article', '<p>文章预览</p>', '<button class="expand">阅读全文</button>')
+    .replace('AnswerItem', 'ArticleItem').replace('id="article"', `id="article" data-zop='{"type":"article","itemId":"42"}'`);
+  const other = answer('other', '<p>相邻回答</p>')
+    .replace('id="other"', `id="other" data-zop='{"type":"answer","itemId":"42"}'`);
+  const { dom, window, synth } = setup(article + other);
+  const item = window.document.querySelector('#article');
+  item.querySelector('.expand').addEventListener('click', event => {
+    event.target.remove();
+    setTimeout(() => { item.querySelector('.RichText').innerHTML = '<p>文章第一段</p><p>文章第二段</p>'; }, 500);
+  });
+  item.querySelector('.zv-play').click(); await sleep(900);
+  assert.equal(synth.utterances.at(-1).text, '文章第一段。 文章第二段');
+  synth.utterances.at(-1).onstart();
+  assert.ok(item.querySelector('p').classList.contains('zv-highlight'));
+  window.document.querySelector('#other .zv-play').click(); await sleep(50);
+  assert.equal(synth.utterances.at(-1).text, '相邻回答');
+  dom.window.close();
+});
+
+test('dynamic article redraw retains playback and does not confuse an answer with the same id', async () => {
+  const article = answer('article', '<p>文章正文</p>').replace('AnswerItem', 'ArticleItem')
+    .replace('id="article"', `id="article" data-zop='{"type":"article","itemId":"42"}'`);
+  const other = answer('other', '<p>回答正文</p>').replace('id="other"', `id="other" data-zop='{"type":"answer","itemId":"42"}'`);
+  const { dom, window, synth } = setup(other);
+  window.document.body.insertAdjacentHTML('beforeend', article); await sleep(150);
+  window.document.querySelector('#article .zv-play').click(); await sleep(50);
+  const utterance = synth.utterances.at(-1); utterance.onstart();
+  window.document.querySelector('#article').outerHTML = article; await sleep(150);
+  assert.equal(window.document.querySelector('#article .zv-play').textContent, '⏸ 暂停');
+  assert.ok(window.document.querySelector('#article p').classList.contains('zv-highlight'));
+  assert.equal(window.document.querySelector('#other .zv-play').textContent, '🔊 朗读');
+  dom.window.close();
+});
+
+test('collapsed article keeps the incomplete warning during playback', async () => {
+  const article = answer('article', '<p>预览</p>', '<button>阅读全文</button>')
+    .replace('AnswerItem', 'ArticleItem').replace('class="RichContent"', 'class="RichContent is-collapsed"');
+  const { dom, window, synth } = setup(article);
+  window.document.querySelector('.zv-play').click(); await sleep(3300);
+  synth.utterances.at(-1).onstart();
+  assert.match(window.document.querySelector('.zv-status').textContent, /未能完整展开/);
+  dom.window.close();
+});
+
+test('ignores nested content belonging to another card and does not add controls to unsupported types', () => {
+  const nested = answer('inner', '<p>内层正文</p>', '<button>阅读全文</button>').replace('AnswerItem', 'ArticleItem');
+  const outer = answer('outer', '<p>外层正文</p>' + nested);
+  const { dom, window } = setup(outer + '<div class="ContentItem PinItem"><div class="ContentItem-actions"></div></div>');
+  const item = window.document.querySelector('#outer');
+  assert.deepEqual(Array.from(window.ZhihuVoiceExtract.extract(item).paragraphs, p => p.text), ['外层正文']);
+  assert.equal(window.ZhihuVoiceExtract.expandButton(item), undefined);
+  assert.equal(window.document.querySelector('.PinItem .zv-controls'), null);
+  dom.window.close();
+});

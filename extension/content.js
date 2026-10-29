@@ -1,7 +1,7 @@
 (() => {
   const { extract, expandButton } = globalThis.ZhihuVoiceExtract;
   let provider = new globalThis.ZhihuVoiceSpeech.BrowserSpeechProvider();
-  const ANSWER = `.AnswerItem, [data-zop*='"type":"answer"']`;
+  const ANSWER = `.AnswerItem, .ArticleItem, [data-zop*='"type":"answer"'], [data-zop*='"type":"article"']`;
   let active = null;
   let serial = 0;
   let locationHref = location.href;
@@ -9,7 +9,10 @@
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
   function answerKey(answer) {
-    try { return String(JSON.parse(answer.getAttribute('data-zop') || '{}').itemId || '') || null; } catch (_) { return null; }
+    try {
+      const data = JSON.parse(answer.getAttribute('data-zop') || '{}');
+      return ['answer', 'article'].includes(data.type) && data.itemId ? `${data.type}:${data.itemId}` : null;
+    } catch (_) { return null; }
   }
   function sameAnswer(answer) {
     return active && (answer === active.answer || (active.key && answerKey(answer) === active.key));
@@ -21,7 +24,7 @@
   function renderControls(controls, state, message = '') {
     const play = controls.querySelector('.zv-play');
     setText(play, state === 'playing' ? '⏸ 暂停' : state === 'paused' ? '▶ 继续' : '🔊 朗读');
-    play.setAttribute('aria-label', state === 'playing' || state === 'paused' ? '暂停或继续朗读' : '朗读此回答');
+    play.setAttribute('aria-label', state === 'playing' || state === 'paused' ? '暂停或继续朗读' : '朗读此内容');
     controls.querySelector('.zv-stop').hidden = !state;
     setText(controls.querySelector('.zv-status'), message);
   }
@@ -52,7 +55,7 @@
   function createControls(answer, actions) {
     const controls = document.createElement('span');
     controls.className = 'zv-controls';
-    controls.innerHTML = '<button type="button" class="zv-play" aria-label="朗读此回答">🔊 朗读</button><button type="button" class="zv-stop" hidden>停止</button><span class="zv-status" role="status" aria-live="polite"></span>';
+    controls.innerHTML = '<button type="button" class="zv-play" aria-label="朗读此内容">🔊 朗读</button><button type="button" class="zv-stop" hidden>停止</button><span class="zv-status" role="status" aria-live="polite"></span>';
     const vote = actions.querySelector('button[aria-label^="反对"], .VoteButton');
     let anchor = vote;
     while (anchor && anchor.parentElement !== actions) anchor = anchor.parentElement;
@@ -63,7 +66,7 @@
       if (sameAnswer(answer)) {
         if (active.state === 'loading') return;
         if (active.state === 'playing') { provider.pause(); active.state = 'paused'; active.message = '已暂停'; }
-        else { provider.resume(); active.state = 'playing'; active.message = '朗读中'; }
+        else { provider.resume(); active.state = 'playing'; active.message = active.incomplete ? '可能未能完整展开，正在朗读可见正文' : '朗读中'; }
         renderActive();
         return;
       }
@@ -72,16 +75,25 @@
       active = { answer, key: answerKey(answer), state: 'loading', message: '正在准备正文…', highlight: null, paragraphIndex: null };
       renderActive();
       const button = expandButton(answer);
+      let expansionUnconfirmed = false;
       if (button) {
+        const preview = extract(answer).paragraphs.map(p => p.text).join('\n');
+        expansionUnconfirmed = true;
         button.click();
+        let previous = '', stable = 0;
         for (let i = 0; i < 20 && token === serial; i++) {
           await wait(150);
-          if (reconcileAnswer() && !expandButton(active.answer)) break;
+          if (!reconcileAnswer()) continue;
+          const current = extract(active.answer);
+          const text = current.paragraphs.map(p => p.text).join('\n');
+          stable = !current.incomplete && text && text === previous ? stable + 1 : 0;
+          previous = text;
+          if (stable >= 1 && text !== preview) { expansionUnconfirmed = false; break; }
         }
-        await wait(150);
       }
       if (token !== serial || !reconcileAnswer()) return;
       const result = extract(active.answer);
+      result.incomplete ||= expansionUnconfirmed;
       if (!result.paragraphs.length) { reset('未能读取正文，请手动展开或刷新页面后重试'); return; }
       let settings = {};
       try { settings = await chrome.runtime.sendMessage({ type: 'settings' }); if (!settings || settings.error) throw new Error(); } catch (_) { if (token === serial) reset('无法读取扩展设置，请重新加载扩展'); return; }
@@ -89,6 +101,7 @@
       provider = settings.provider === 'tencent' ? new globalThis.ZhihuVoiceSpeech.TencentSpeechProvider() : new globalThis.ZhihuVoiceSpeech.BrowserSpeechProvider();
       active.state = 'playing';
       active.message = result.incomplete ? '可能未能完整展开，正在朗读可见正文' : '正在启动语音…';
+      active.incomplete = result.incomplete;
       active.paragraphs = result.paragraphs;
       renderActive();
       try {
@@ -96,7 +109,7 @@
           onParagraph(index) {
             if (token !== serial || !active) return;
             active.paragraphIndex = index;
-            active.message = '朗读中';
+            active.message = result.incomplete ? '可能未能完整展开，正在朗读可见正文' : '朗读中';
             updateHighlight();
             renderActive();
           },
