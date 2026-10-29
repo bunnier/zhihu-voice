@@ -26,6 +26,9 @@
   "action": {
     "default_title": "知乎回答朗读：在扩展管理中打开设置"
   },
+  "host_permissions": [
+    "https://tts.tencentcloudapi.com/*"
+  ],
   "background": {
     "service_worker": "background.js"
   }

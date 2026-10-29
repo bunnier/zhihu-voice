@@ -86,7 +86,7 @@
       let settings = {};
       try { settings = await chrome.runtime.sendMessage({ type: 'settings' }); if (!settings || settings.error) throw new Error(); } catch (_) { if (token === serial) reset('无法读取扩展设置，请重新加载扩展'); return; }
       if (token !== serial || !reconcileAnswer()) return;
-      provider = new globalThis.ZhihuVoiceSpeech.BrowserSpeechProvider();
+      provider = settings.provider === 'tencent' ? new globalThis.ZhihuVoiceSpeech.TencentSpeechProvider() : new globalThis.ZhihuVoiceSpeech.BrowserSpeechProvider();
       active.state = 'playing';
       active.message = result.incomplete ? '可能未能完整展开，正在朗读可见正文' : '正在启动语音…';
       active.paragraphs = result.paragraphs;

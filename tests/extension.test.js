@@ -14,7 +14,7 @@ function setup(html) {
   const synth = { utterances: [], paused: false, cancels: 0, speak(u) { this.utterances.push(u); }, cancel() { this.cancels++; }, pause() { this.paused = true; }, resume() { this.paused = false; }, getVoices() { return [{ lang: 'zh-CN', voiceURI: 'zh' }]; } };
   window.speechSynthesis = synth;
   window.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
-  window.chrome = { runtime: { sendMessage: async () => ({ rate: 1, voiceURI: '' }) } };
+  window.chrome = { runtime: { sendMessage: async () => ({ provider: 'browser', rate: 1, voiceURI: '' }) } };
   for (const file of ['extract.js', 'speech.js', 'content.js']) window.eval(source(file));
   return { dom, window, synth };
 }

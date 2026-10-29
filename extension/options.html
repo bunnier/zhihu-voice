@@ -1,7 +1,17 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>知乎回答朗读设置</title><link rel="stylesheet" href="options.css"></head><body><main>
 <h1>知乎回答朗读</h1>
+<label for="provider">语音服务</label><select id="provider"><option value="browser">浏览器语音</option><option value="tencent">腾讯云语音合成</option></select>
 <section id="browser-settings"><label for="voice">浏览器声音</label><select id="voice"><option value="">自动选择中文声音</option></select><p>可用声音和音质因浏览器和设备而异。</p></section>
+<section id="tencent-settings" hidden>
+<p>使用腾讯云时，当前回答的文本会分段发送至腾讯云合成，可能产生费用。</p>
+<label for="tencent-voice">腾讯云音色</label><select id="tencent-voice"><option value="101001">智瑜 · 情感女声（精品）</option><option value="101004">智云 · 通用男声（精品）</option><option value="101011">智燕 · 新闻女声（精品）</option><option value="101021">智瑞 · 新闻男声（精品）</option><option value="601013">爱小伊 · 阅读女声（大模型）</option></select>
+<label for="secret-id">SecretId</label><input id="secret-id" type="password" autocomplete="off" spellcheck="false" placeholder="输入新的 SecretId">
+<label for="secret-key">SecretKey</label><input id="secret-key" type="password" autocomplete="off" spellcheck="false" placeholder="输入新的 SecretKey">
+<p id="credential-status"></p><p>留空表示保留已保存的密钥；如需更换，请同时填写两项。密钥保存在此浏览器的扩展本地存储中，并非加密保险箱；能访问浏览器配置或扩展数据的人可能读取。建议使用权限受限的腾讯云子账号密钥。</p>
+<button id="clear-credentials" class="secondary" type="button">删除已保存的密钥</button>
+<p>免费资源包需在控制台领取，有效期和额度随音色类型而异；超额后是否收费取决于资源包及后付费状态。请以<a href="https://cloud.tencent.com/document/product/1073/34112" target="_blank" rel="noreferrer">腾讯云计费说明</a>和控制台为准。<a href="https://cloud.tencent.com/document/product/1073/92668" target="_blank" rel="noreferrer">音色列表</a></p>
+</section>
 <label for="rate">播放速度</label><select id="rate"><option value="0.75">0.75×</option><option value="0.8">0.8×</option><option value="1">1× 正常</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select>
-<p>保存后在下一次开始朗读时生效。</p>
+<p>保存后在下一次开始朗读时生效。腾讯云以正常语速合成，再按所选倍速播放。</p>
 <button id="save" type="button">保存设置</button><p id="status" role="status"></p>
 </main><script src="options.js"></script></body></html>
