@@ -13,5 +13,8 @@
 </section>
 <label for="rate">播放速度</label><select id="rate"><option value="0.75">0.75×</option><option value="0.8">0.8×</option><option value="1">1× 正常</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select>
 <p>保存后在下一次开始朗读时生效。腾讯云以正常语速合成，再按所选倍速播放。</p>
+<p>试听示例：你好，这是一段语音试听。请选择适合你的声音和播放速度。</p>
+<p id="preview-notice" hidden>点击试听会使用已保存的腾讯云密钥，将上述示例发送至腾讯云，可能产生费用。新输入的密钥需保存后才能用于试听。</p>
+<button id="preview" type="button" disabled>试听当前选择</button><button id="stop-preview" class="secondary" type="button" hidden>停止试听</button><p id="preview-status" role="status" aria-live="polite"></p>
 <button id="save" type="button">保存设置</button><p id="status" role="status"></p>
-</main><script src="options.js"></script></body></html>
+</main><script src="speech.js"></script><script src="options.js"></script></body></html>

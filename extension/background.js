@@ -6,6 +6,8 @@ const defaults = { provider: 'browser', rate: 1, voiceURI: '', tencentVoice: 101
 const allowed = sender => {
   try { return sender.id === chrome.runtime.id && new URL(sender.url).origin === 'https://www.zhihu.com'; } catch (_) { return false; }
 };
+const previewAllowed = sender => sender?.id === chrome.runtime.id && sender.url === chrome.runtime.getURL('options.html');
+const previewText = '你好，这是一段语音试听。请选择适合你的声音和播放速度。';
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (!allowed(sender) || message?.type !== 'settings') return;
   (async () => {
@@ -25,18 +27,19 @@ function errorMessage(code) {
   return `腾讯云合成失败（${/^[\w.]+$/.test(code) ? code : '未知错误'}），请检查服务和设置`;
 }
 chrome.runtime.onConnect.addListener(port => {
-  if (port.name !== 'tencent-tts' || !allowed(port.sender)) { port.disconnect(); return; }
+  const preview = port.name === 'tencent-preview';
+  if (!(preview ? previewAllowed(port.sender) : port.name === 'tencent-tts' && allowed(port.sender))) { port.disconnect(); return; }
   let controller, used = false, disconnected = false;
   port.onDisconnect.addListener(() => { disconnected = true; controller?.abort(); });
   port.onMessage.addListener(async message => {
     if (used) return;
     used = true;
     try {
-      const text = message?.text;
+      const text = preview ? previewText : message?.text;
       if (typeof text !== 'string' || !text.trim() || text.length > 150) throw new Error('文本分段无效，请重新开始朗读');
       await restricted;
       const settings = await chrome.storage.local.get(defaults);
-      if (!settings.secretId || !settings.secretKey) throw new Error('请在扩展设置中填写腾讯云 SecretId 和 SecretKey');
+      if (!settings.secretId || !settings.secretKey) throw new Error(preview ? '尚未保存腾讯云密钥，请填写并保存密钥后试听' : '请在扩展设置中填写腾讯云 SecretId 和 SecretKey');
       const voiceType = Number(message.voiceType);
       if (!Number.isSafeInteger(voiceType) || voiceType < 0) throw new Error('腾讯云音色无效，请检查设置');
       const body = { Text: text, SessionId: crypto.randomUUID(), VoiceType: voiceType, Codec: 'mp3', SampleRate: 16000, Speed: 0 };

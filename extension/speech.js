@@ -50,7 +50,7 @@
     stop() { this.generation++; if (this.running) { this.running = false; this.synth.cancel(); } }
   }
   class TencentSpeechProvider {
-    constructor() { this.generation = 0; this.audio = null; this.port = null; this.url = null; this.paused = false; this.playAttempt = 0; }
+    constructor({ preview = false } = {}) { this.preview = preview; this.generation = 0; this.audio = null; this.port = null; this.url = null; this.paused = false; this.playAttempt = 0; }
     start(paragraphs, settings, callbacks) {
       this.stop();
       const generation = this.generation;
@@ -62,7 +62,7 @@
         if (generation !== this.generation || this.paused) return;
         if (cursor >= chunks.length) { callbacks.onEnd(); return; }
         const chunk = chunks[cursor++];
-        const port = chrome.runtime.connect({ name: 'tencent-tts' });
+        const port = chrome.runtime.connect({ name: this.preview ? 'tencent-preview' : 'tencent-tts' });
         this.port = port;
         let received = false;
         port.onDisconnect.addListener(() => { if (!received && generation === this.generation) fail('腾讯云连接中断，请重试'); });
@@ -83,7 +83,7 @@
             if (!this.paused) this.playAudio();
           } catch (_) { fail('腾讯云音频数据无效，请重试'); }
         });
-        port.postMessage({ text: chunk.text, voiceType: settings.tencentVoice });
+        port.postMessage(this.preview ? { voiceType: settings.tencentVoice } : { text: chunk.text, voiceType: settings.tencentVoice });
       };
       this.next = next;
       next();
