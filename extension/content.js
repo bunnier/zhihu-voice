@@ -180,7 +180,7 @@
     floating = document.createElement('div');
     floating.className = 'zv-floating';
     floating.style.left = '16px'; floating.style.top = Math.max(0, innerHeight - 140) + 'px';
-    floating.innerHTML = `<button type="button" class="zv-float-play"></button><div class="zv-float-panel"><div class="zv-float-panel-inner"><div class="zv-float-heading"><span class="zv-float-title">朗读控制</span><span class="zv-float-state"></span></div><label class="zv-float-rate"><span>播放倍速</span><select aria-label="当前朗读倍速"><option value="0.75">0.75×</option><option value="0.8">0.8×</option><option value="1">1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select></label><span class="zv-float-hint" role="status"></span><button type="button" class="zv-float-settings"><span>语音设置</span><span aria-hidden="true">›</span></button></div></div><button type="button" class="zv-float-menu" aria-label="展开朗读工具" aria-expanded="false">⋯</button>`;
+    floating.innerHTML = `<button type="button" class="zv-float-play"></button><div class="zv-float-panel"><div class="zv-float-panel-inner"><div class="zv-float-heading"><span class="zv-float-title">朗读控制</span><span class="zv-float-state"></span></div><label class="zv-float-rate"><span>播放倍速</span><select aria-label="当前朗读倍速"><option value="0.75">0.75×</option><option value="0.8">0.8×</option><option value="1">1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select></label><span class="zv-float-hint" role="status"></span><button type="button" class="zv-float-locate"><span>定位朗读位置</span><span aria-hidden="true">›</span></button><button type="button" class="zv-float-settings"><span>语音设置</span><span aria-hidden="true">›</span></button></div></div><button type="button" class="zv-float-menu" aria-label="展开朗读工具" aria-expanded="false">⋯</button>`;
     document.documentElement.append(floating);
     const button = floating.querySelector('.zv-float-play');
     const menu = floating.querySelector('.zv-float-menu');
@@ -220,6 +220,15 @@
       pageRate = active.rate = Number(event.target.value);
       provider.setRate(pageRate);
       floating.querySelector('.zv-float-hint').textContent = active.provider === 'tencent' ? '倍速已调整' : '浏览器语音将在下一片段使用新倍速';
+      clampFloating();
+    });
+    floating.querySelector('.zv-float-locate').addEventListener('click', () => {
+      if (reconcileAnswer()) updateHighlight();
+      const target = active?.highlight;
+      if (target?.isConnected && active.answer.contains(target)) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        floating.querySelector('.zv-float-hint').textContent = '';
+      } else floating.querySelector('.zv-float-hint').textContent = '暂时无法定位朗读位置';
       clampFloating();
     });
     floating.querySelector('.zv-float-settings').addEventListener('click', async () => {

@@ -33,7 +33,7 @@
 .zv-float-rate select:disabled { color: #8590a6; cursor: default; }
 .zv-float-hint { color: #8590a6; font-size: 12px; line-height: 1.5; }
 .zv-float-hint:not(:empty) { margin-top: 8px; }
-.zv-float-settings { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 14px; padding: 12px 0 0; border: 0; border-top: 1px solid #f0f2f5; background: transparent; color: #175199; text-align: left; cursor: pointer; font-size: 13px !important; }
-.zv-float-settings span:last-child { color: #8590a6; font-size: 20px; line-height: 1; }
-.zv-float-settings:hover, .zv-float-settings:hover span:last-child { color: #056de8; }
+.zv-float-locate, .zv-float-settings { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 14px; padding: 12px 0 0; border: 0; border-top: 1px solid #f0f2f5; background: transparent; color: #175199; text-align: left; cursor: pointer; font-size: 13px !important; }
+.zv-float-locate span:last-child, .zv-float-settings span:last-child { color: #8590a6; font-size: 20px; line-height: 1; }
+.zv-float-locate:hover, .zv-float-locate:hover span:last-child, .zv-float-settings:hover, .zv-float-settings:hover span:last-child { color: #056de8; }
 .zv-floating button:focus-visible, .zv-floating select:focus-visible { outline: 2px solid #056de8; outline-offset: 2px; }

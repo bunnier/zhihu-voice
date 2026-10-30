@@ -280,6 +280,29 @@ test('floating control follows active playback, switches answers, and hides on e
   dom.window.close();
 });
 
+test('locates the current paragraph after playback advances and the answer is redrawn', async () => {
+  const markup = answer('a', '<p>第一段</p><p>第二段</p>')
+    .replace('id="a"', `id="a" data-zop='{"type":"answer","itemId":"42"}'`);
+  const { dom, window, synth } = setup(markup);
+  const scrolled = [];
+  window.Element.prototype.scrollIntoView = function(options) { scrolled.push({ element: this, options }); };
+  window.document.querySelector('.zv-play').click(); await sleep(30);
+  const locate = window.document.querySelector('.zv-float-locate');
+  locate.click();
+  assert.equal(scrolled.length, 0);
+  assert.match(window.document.querySelector('.zv-float-hint').textContent, /无法定位/);
+  const utterance = synth.utterances.at(-1);
+  utterance.onstart();
+  utterance.onboundary({ charIndex: '第一段。 '.length });
+  window.document.querySelector('#a').outerHTML = markup;
+  locate.click();
+  assert.equal(scrolled.length, 1);
+  assert.equal(scrolled[0].element, window.document.querySelectorAll('#a p')[1]);
+  assert.equal(scrolled[0].options.block, 'center');
+  assert.equal(window.document.querySelector('.zv-float-hint').textContent, '');
+  dom.window.close();
+});
+
 test('floating drag does not toggle, stays in viewport, and menu and rate follow playback', async () => {
   const { dom, window, synth } = setup(answer('a', '<p>' + '甲'.repeat(250) + '</p>'));
   const $ = s => window.document.querySelector(s);
